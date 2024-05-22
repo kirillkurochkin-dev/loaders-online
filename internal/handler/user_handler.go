@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -61,13 +60,13 @@ func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 	}
 	switch role {
 	case "customer":
-		customer, err := h.userService.GetCustomerById(context.Background(), id)
+		customer, err := h.userService.GetCustomerById(r.Context(), id)
 		if err != nil {
 			util.LogHandler("me", "error getting customer by id", err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		customer.RegisteredLoaders, err = h.userService.GetAssignedLoaders(context.Background(), id)
+		customer.RegisteredLoaders, err = h.userService.GetAssignedLoaders(r.Context(), id)
 
 		fmt.Println(customer.RegisteredLoaders)
 
@@ -80,7 +79,7 @@ func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 		w.Write(b)
 		w.WriteHeader(http.StatusOK)
 	case "loader":
-		loader, err := h.userService.GetLoaderById(context.Background(), id)
+		loader, err := h.userService.GetLoaderById(r.Context(), id)
 		if err != nil {
 			util.LogHandler("me", "error getting loader by id", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -111,7 +110,7 @@ func (h *Handler) tasks(w http.ResponseWriter, r *http.Request) {
 
 	switch role {
 	case "customer":
-		tasks, err := h.taskService.GetUncompletedTasks(context.Background(), id)
+		tasks, err := h.taskService.GetUncompletedTasks(r.Context(), id)
 		if err != nil {
 			util.LogHandler("me", "error getting uncompleted tasks", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -126,7 +125,7 @@ func (h *Handler) tasks(w http.ResponseWriter, r *http.Request) {
 		w.Write(b)
 		w.WriteHeader(http.StatusOK)
 	case "loader":
-		tasks, err := h.taskService.GetCompletedTasks(context.Background(), id)
+		tasks, err := h.taskService.GetCompletedTasks(r.Context(), id)
 		if err != nil {
 			util.LogHandler("me", "error getting completed tasks", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -149,7 +148,7 @@ func (h *Handler) tasks(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) start(w http.ResponseWriter, r *http.Request) {
 	id, _, err := getAuth(r)
-	tasks, err := h.taskService.GetUncompletedTasks(context.Background(), id)
+	tasks, err := h.taskService.GetUncompletedTasks(r.Context(), id)
 	if err != nil {
 		util.LogHandler("start", "error getting uncompleted tasks", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -222,13 +221,13 @@ func (h *Handler) start(w http.ResponseWriter, r *http.Request) {
 					tasks[j].Weight = 0
 				}
 				fmt.Println(tasks[j].Weight)
-				err := h.taskService.AssignTasks(context.Background(), tasks[j].TaskID, loaders[i].LoaderID)
+				err := h.taskService.AssignTasks(r.Context(), tasks[j].TaskID, loaders[i].LoaderID)
 				if err != nil {
 					util.LogHandler("start", "error assigning tasks", err)
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
-				err = h.taskService.UpdateTask(context.Background(), &tasks[j])
+				err = h.taskService.UpdateTask(r.Context(), &tasks[j])
 				if err != nil {
 					util.LogHandler("start", "error updating task", err)
 					w.WriteHeader(http.StatusInternalServerError)
@@ -242,7 +241,7 @@ func (h *Handler) start(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			loaders[i] = game.DoJob(loaders[i])
-			err = h.userService.UpdateLoader(context.Background(), &loaders[i])
+			err = h.userService.UpdateLoader(r.Context(), &loaders[i])
 			if err != nil {
 				util.LogHandler("start", "error updating loader", err)
 				return
