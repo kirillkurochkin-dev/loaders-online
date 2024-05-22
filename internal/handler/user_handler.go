@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -148,6 +149,12 @@ func (h *Handler) tasks(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) start(w http.ResponseWriter, r *http.Request) {
 	id, _, err := getAuth(r)
+	if err != nil {
+		util.LogHandler("start", "error getting auth", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	tasks, err := h.taskService.GetUncompletedTasks(r.Context(), id)
 	if err != nil {
 		util.LogHandler("start", "error getting uncompleted tasks", err)
@@ -156,28 +163,20 @@ func (h *Handler) start(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var loaderInputIdDto dto.LoaderInputIdDto
-	err = json.NewDecoder(r.Body).Decode(&loaderInputIdDto)
-	if err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&loaderInputIdDto); err != nil {
 		util.LogHandler("start", "error decoding body", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	loadersIds := loaderInputIdDto.Loaders
 
-	var loaders []dto.LoaderOutputDto
-	for i := 0; i < len(loadersIds); i++ {
-		loader, err := h.userService.GetLoaderById(r.Context(), loadersIds[i])
-		if err != nil {
-			util.LogHandler("start", "error getting loader", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		loaders = append(loaders, *loader)
+	loaders, err := h.getLoadersByIds(r.Context(), loaderInputIdDto.Loaders)
+	if err != nil {
+		util.LogHandler("start", "error getting loaders", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	customer, err := h.userService.GetCustomerById(r.Context(), id)
-
 	if err != nil {
 		util.LogHandler("start", "error getting customer", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -201,70 +200,14 @@ func (h *Handler) start(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	flag := false
-
-	j := 0
-	for {
-		if len(tasks) == 0 {
-			flag = true
-			break
-		}
-		if len(loaders) == 0 {
-			break
-		}
-
-		for i := 0; i < len(loaders); i++ {
-			game.Recalculate(&loaders[i])
-			if loaders[i].Fatigue != 100 {
-				tasks[j].Weight -= loaders[i].MaxWeight
-				if tasks[j].Weight < 0 {
-					tasks[j].Weight = 0
-				}
-				fmt.Println(tasks[j].Weight)
-				err := h.taskService.AssignTasks(r.Context(), tasks[j].TaskID, loaders[i].LoaderID)
-				if err != nil {
-					util.LogHandler("start", "error assigning tasks", err)
-					w.WriteHeader(http.StatusInternalServerError)
-					return
-				}
-				err = h.taskService.UpdateTask(r.Context(), &tasks[j])
-				if err != nil {
-					util.LogHandler("start", "error updating task", err)
-					w.WriteHeader(http.StatusInternalServerError)
-					return
-				}
-				if tasks[j].Weight <= 0 {
-					tasks[j].Completed = true
-
-					tasks = append(tasks[:j], tasks[j+1:]...)
-					//j++ не делаем, само сдвинется
-				}
-			}
-			loaders[i] = game.DoJob(loaders[i])
-			err = h.userService.UpdateLoader(r.Context(), &loaders[i])
-			if err != nil {
-				util.LogHandler("start", "error updating loader", err)
-				return
-			}
-			if loaders[i].Fatigue >= 100 {
-				loaders = append(loaders[:i], loaders[i+1:]...)
-				i--
-			}
-		}
+	result, err := h.processTasksAndLoaders(r.Context(), tasks, loaders)
+	if err != nil {
+		util.LogHandler("start", "error processing tasks and loaders", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
-	type Response struct {
-		Result string `json:"result"`
-	}
-
-	var response Response
-
-	if flag {
-		response = Response{Result: "win"}
-	} else {
-		response = Response{Result: "lose"}
-	}
-
+	response := Response{Result: result}
 	jsonResponse, err := json.Marshal(response)
 	if err != nil {
 		util.LogHandler("start", "error marshalling response", err)
@@ -274,6 +217,75 @@ func (h *Handler) start(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(jsonResponse)
+}
+
+func (h *Handler) getLoadersByIds(ctx context.Context, loaderIds []int) ([]dto.LoaderOutputDto, error) {
+	var loaders []dto.LoaderOutputDto
+	for _, id := range loaderIds {
+		loader, err := h.userService.GetLoaderById(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		loaders = append(loaders, *loader)
+	}
+	return loaders, nil
+}
+
+func (h *Handler) processTasksAndLoaders(ctx context.Context, tasks []dto.TaskUncompletedDto, loaders []dto.LoaderOutputDto) (string, error) {
+	flag := false
+
+	for len(tasks) > 0 && len(loaders) > 0 {
+		for i := 0; i < len(loaders); i++ {
+			game.Recalculate(&loaders[i])
+			if loaders[i].Fatigue != 100 {
+				taskIndex := 0
+				tasks[taskIndex].Weight -= loaders[i].MaxWeight
+				if tasks[taskIndex].Weight < 0 {
+					tasks[taskIndex].Weight = 0
+				}
+
+				err := h.taskService.AssignTasks(ctx, tasks[taskIndex].TaskID, loaders[i].LoaderID)
+				if err != nil {
+					return "", err
+				}
+
+				err = h.taskService.UpdateTask(ctx, &tasks[taskIndex])
+				if err != nil {
+					return "", err
+				}
+
+				if tasks[taskIndex].Weight <= 0 {
+					tasks[taskIndex].Completed = true
+					tasks = append(tasks[:taskIndex], tasks[taskIndex+1:]...)
+				}
+			}
+
+			loaders[i] = game.DoJob(loaders[i])
+			err := h.userService.UpdateLoader(ctx, &loaders[i])
+			if err != nil {
+				return "", err
+			}
+
+			if loaders[i].Fatigue >= 100 {
+				loaders = append(loaders[:i], loaders[i+1:]...)
+				i--
+			}
+		}
+
+		if len(tasks) == 0 {
+			flag = true
+			break
+		}
+	}
+
+	if flag {
+		return "win", nil
+	}
+	return "lose", nil
+}
+
+type Response struct {
+	Result string `json:"result"`
 }
 
 func getAuth(r *http.Request) (int, string, error) {

@@ -2,8 +2,8 @@ package util
 
 import (
 	"errors"
-	"fmt"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/sirupsen/logrus"
 	"strconv"
 	"time"
 )
@@ -55,8 +55,10 @@ func ValidateJWT(tokenString string) (*Claims, error) {
 		return nil, errors.New("token is expired")
 	}
 
-	// Логирование декодированных клаймов
-	fmt.Printf("Validated Claims: %+v\n", claims)
+	logrus.WithFields(logrus.Fields{
+		"user_id": claims.UserID,
+		"role":    claims.Role,
+	})
 
 	return claims, nil
 }
