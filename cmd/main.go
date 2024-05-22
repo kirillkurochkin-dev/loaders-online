@@ -40,9 +40,12 @@ func main() {
 	defer db.Close()
 
 	userRepository := repository.NewUserRepository(db)
+	taskRepository := repository.NewTaskRepository(db)
 
 	userService := service.NewUserService(userRepository)
-	contr := handler.NewHandler(userService)
+	taskService := service.NewTaskService(taskRepository)
+
+	contr := handler.NewHandler(userService, taskService)
 
 	srv := &http.Server{
 		Addr:    ":8080",
