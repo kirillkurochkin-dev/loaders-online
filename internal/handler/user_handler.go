@@ -53,7 +53,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
-	id, role, err := getAuth(w, r)
+	id, role, err := getAuth(r)
 	if err != nil {
 		util.LogHandler("me", "error getting auth data", err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -102,7 +102,7 @@ func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) tasks(w http.ResponseWriter, r *http.Request) {
-	id, role, err := getAuth(w, r)
+	id, role, err := getAuth(r)
 	if err != nil {
 		util.LogHandler("me", "error getting auth data", err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -148,7 +148,7 @@ func (h *Handler) tasks(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) start(w http.ResponseWriter, r *http.Request) {
-	id, _, err := getAuth(w, r)
+	id, _, err := getAuth(r)
 	tasks, err := h.taskService.GetUncompletedTasks(context.Background(), id)
 	if err != nil {
 		util.LogHandler("start", "error getting uncompleted tasks", err)
@@ -254,10 +254,30 @@ func (h *Handler) start(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	fmt.Println(flag)
+	type Response struct {
+		Result string `json:"result"`
+	}
+
+	var response Response
+
+	if flag {
+		response = Response{Result: "win"}
+	} else {
+		response = Response{Result: "lose"}
+	}
+
+	jsonResponse, err := json.Marshal(response)
+	if err != nil {
+		util.LogHandler("start", "error marshalling response", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonResponse)
 }
 
-func getAuth(w http.ResponseWriter, r *http.Request) (int, string, error) {
+func getAuth(r *http.Request) (int, string, error) {
 	userID, ok := r.Context().Value("userID").(string)
 	id, err := strconv.Atoi(userID)
 	if !ok || id == 0 {
