@@ -4,6 +4,7 @@ import (
 	"context"
 	"loaders-online/internal/entity/dto"
 	"loaders-online/internal/repository"
+	"loaders-online/pkg/game"
 	"loaders-online/pkg/util"
 	"math/rand"
 )
@@ -16,12 +17,14 @@ type UserRepository interface {
 type CustomerRepository interface {
 	CreateCustomer(ctx context.Context, customer *dto.CustomerSignUpDto) error
 	GetCustomerById(ctx context.Context, id int) (dto.CustomerOutputDto, error)
+	UpdateCustomer(ctx context.Context, outputDto dto.CustomerUpdateDto) error
 }
 
 type LoaderRepository interface {
 	GetAssignedLoaders(ctx context.Context, id int) ([]dto.LoaderOutputDto, error)
 	GetLoaderById(ctx context.Context, id int) (*dto.LoaderOutputDto, error)
 	CreateLoader(ctx context.Context, loader *dto.LoaderOutputDto) error
+	UpdateLoader(ctx context.Context, loader *dto.LoaderOutputDto) error
 }
 
 type UserService struct {
@@ -95,18 +98,22 @@ func (s *UserService) GetAssignedLoaders(ctx context.Context, id int) ([]dto.Loa
 func (s *UserService) GetLoaderById(ctx context.Context, id int) (*dto.LoaderOutputDto, error) {
 	return s.loadersRepository.GetLoaderById(ctx, id)
 }
-
+func (s *UserService) UpdateLoader(ctx context.Context, loader *dto.LoaderOutputDto) error {
+	return s.loadersRepository.UpdateLoader(ctx, loader)
+}
+func (s *UserService) UpdateCustomer(ctx context.Context, outputDto dto.CustomerUpdateDto) error {
+	return s.customerRepository.UpdateCustomer(ctx, outputDto)
+}
 func generateRandomCustomer(id int) *dto.CustomerSignUpDto {
 	return &dto.CustomerSignUpDto{
 		CustomerID:      id,
 		StartingCapital: float64(rand.Intn(90001) + 10000),
 	}
 }
-
 func generateRandomLoader(id int) *dto.LoaderOutputDto {
-	maxWeight := float64(rand.Intn(26) + 5)
+	maxWeight := float64(rand.Intn(11) + 20)
 	drunkenness := rand.Intn(2) == 1
-	Fatigue := float64(rand.Intn(101))
+	Fatigue := float64(rand.Intn(71))
 	Salary := float64(rand.Intn(20001) + 10000)
 
 	loader := &dto.LoaderOutputDto{
@@ -117,28 +124,7 @@ func generateRandomLoader(id int) *dto.LoaderOutputDto {
 		Salary:      Salary,
 	}
 
-	recalcMaxWeight(loader)
+	game.Recalculate(loader)
 
 	return loader
-}
-
-func recalcMaxWeight(l *dto.LoaderOutputDto) {
-	if l.Drunkenness {
-		l.MaxWeight = l.MaxWeight * (100 - (l.Fatigue + 50))
-		l.Drunkenness = false
-	} else {
-		l.MaxWeight = l.MaxWeight * (100 - l.Fatigue)
-	}
-
-	if l.MaxWeight < 5 {
-		l.MaxWeight = 5
-	}
-	if l.MaxWeight > 30 {
-		l.MaxWeight = 30
-	}
-
-	l.Fatigue += 20
-	if l.Fatigue > 100 {
-		l.Fatigue = 100
-	}
 }

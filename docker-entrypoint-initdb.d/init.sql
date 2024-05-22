@@ -25,7 +25,7 @@ create table tasks(
                       task_id SERIAL PRIMARY KEY,
                       customer_id INT NOT NULL,
                       task_name VARCHAR(100) NOT NULL,
-                      weight DECIMAL(5, 2) CHECK (weight BETWEEN 10 AND 80),
+                      weight DECIMAL(5, 2) CHECK (weight BETWEEN 0 AND 80),
                       completed BOOLEAN DEFAULT FALSE,
                       FOREIGN KEY (customer_id) REFERENCES Users(user_id)
 

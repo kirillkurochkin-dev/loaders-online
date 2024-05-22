@@ -14,13 +14,13 @@ func NewCustomerRepository(db *sql.DB) *CustomerRepository {
 	return &CustomerRepository{db: db}
 }
 
-func (c CustomerRepository) CreateCustomer(ctx context.Context, customer *dto.CustomerSignUpDto) error {
+func (c *CustomerRepository) CreateCustomer(ctx context.Context, customer *dto.CustomerSignUpDto) error {
 	_, err := c.db.ExecContext(ctx, "INSERT INTO customers (customer_id, starting_capital, current_capital) VALUES ($1, $2, $3)",
 		customer.CustomerID, customer.StartingCapital, customer.StartingCapital)
 	return err
 }
 
-func (c CustomerRepository) GetCustomerById(ctx context.Context, id int) (dto.CustomerOutputDto, error) {
+func (c *CustomerRepository) GetCustomerById(ctx context.Context, id int) (dto.CustomerOutputDto, error) {
 	var customer dto.CustomerOutputDto
 	err := c.db.QueryRowContext(ctx, "SELECT current_capital FROM customers WHERE customer_id = $1", id).
 		Scan(&customer.CurrentCapital)
@@ -44,4 +44,10 @@ func (c CustomerRepository) GetCustomerById(ctx context.Context, id int) (dto.Cu
 
 	customer.RegisteredLoaders = loaders
 	return customer, err
+}
+
+func (c *CustomerRepository) UpdateCustomer(ctx context.Context, outputDto dto.CustomerUpdateDto) error {
+	_, err := c.db.ExecContext(ctx, "UPDATE customers SET current_capital = $1 WHERE customer_id = $2",
+		outputDto.CurrentCapital, outputDto.CustomerID)
+	return err
 }

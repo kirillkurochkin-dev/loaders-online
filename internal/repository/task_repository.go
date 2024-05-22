@@ -53,3 +53,15 @@ func (t *TaskRepository) GetCompletedTasksForLoader(ctx context.Context, id int)
 	}
 	return tasks, err
 }
+
+func (t *TaskRepository) UpdateTask(ctx context.Context, task *dto.TaskUncompletedDto) error {
+	_, err := t.db.ExecContext(ctx, "UPDATE tasks SET task_name = $1, weight = $2, completed = $3 WHERE task_id = $4",
+		task.TaskName, task.Weight, task.Completed, task.TaskID)
+	return err
+}
+
+func (t *TaskRepository) AssignTask(ctx context.Context, taskId int, loaderId int) error {
+	_, err := t.db.ExecContext(ctx, "INSERT INTO loaders_tasks (loader_id, task_id) VALUES ($1, $2) ON CONFLICT (loader_id, task_id) DO NOTHING",
+		loaderId, taskId)
+	return err
+}

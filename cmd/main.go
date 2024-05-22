@@ -44,7 +44,7 @@ func main() {
 	loaderRepository := repository.NewLoaderRepository(db)
 	taskRepository := repository.NewTaskRepository(db)
 
-	userService := service.NewUserService(&userRepository, customerRepository, loaderRepository)
+	userService := service.NewUserService(userRepository, customerRepository, loaderRepository)
 	taskService := service.NewTaskService(taskRepository)
 
 	contr := handler.NewHandler(userService, taskService)
