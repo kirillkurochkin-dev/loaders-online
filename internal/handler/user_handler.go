@@ -94,6 +94,53 @@ func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 		w.Write(b)
 		w.WriteHeader(http.StatusOK)
 	default:
+		util.LogHandler("me", "role not found in context", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+}
+
+func (h *Handler) tasks(w http.ResponseWriter, r *http.Request) {
+	id, role, err := getAuth(w, r)
+	if err != nil {
+		util.LogHandler("me", "error getting auth data", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	switch role {
+	case "customer":
+		tasks, err := h.taskService.GetUncompletedTasks(context.Background(), id)
+		if err != nil {
+			util.LogHandler("me", "error getting uncompleted tasks", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		b, err := json.Marshal(tasks)
+		if err != nil {
+			util.LogHandler("me", "error marshalling tasks", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.Write(b)
+		w.WriteHeader(http.StatusOK)
+	case "loader":
+		tasks, err := h.taskService.GetCompletedTasks(context.Background(), id)
+		if err != nil {
+			util.LogHandler("me", "error getting completed tasks", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		b, err := json.Marshal(tasks)
+		if err != nil {
+			util.LogHandler("me", "error marshalling tasks", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.Write(b)
+		w.WriteHeader(http.StatusOK)
+	default:
+		util.LogHandler("tasks", "role not found in context", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}

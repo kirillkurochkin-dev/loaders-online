@@ -7,17 +7,17 @@ import (
 	"net/http"
 )
 
-func (h *Handler) tasks(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) tasksPublic(w http.ResponseWriter, r *http.Request) {
 	var task dto.CreateTaskDto
 	err := json.NewDecoder(r.Body).Decode(&task)
 	if err != nil {
-		util.LogHandler("createTasks", "json decode error", err)
+		util.LogHandler("tasksPublic", "json decode error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	err = h.taskService.CreateTask(r.Context(), &task)
 	if err != nil {
-		util.LogHandler("createTasks", "create task error", err)
+		util.LogHandler("tasksPublic", "create task error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}

@@ -10,6 +10,8 @@ import (
 
 type TaskService interface {
 	CreateTask(ctx context.Context, taskCr *dto.CreateTaskDto) error
+	GetCompletedTasks(ctx context.Context, id int) ([]dto.TaskCompletedDto, error)
+	GetUncompletedTasks(ctx context.Context, id int) ([]dto.TaskUncompletedDto, error)
 }
 
 type UserService interface {
@@ -43,13 +45,14 @@ func (h *Handler) InitRouter() *mux.Router {
 		//public
 		public.HandleFunc("/register", h.register).Methods(http.MethodPost)
 		public.HandleFunc("/login", h.login).Methods(http.MethodPost)
-		public.HandleFunc("/tasks", h.tasks).Methods(http.MethodPost)
+		public.HandleFunc("/tasks", h.tasksPublic).Methods(http.MethodPost)
 
 		//protected (customer, loader)
 		customerLoaderOnly := public.PathPrefix("").Subrouter()
 		customerLoaderOnly.Use(middleware.JWTMiddleware)
 		customerLoaderOnly.Use(middleware.RoleMiddleware("customer", "loader"))
 		customerLoaderOnly.HandleFunc("/me", h.me).Methods(http.MethodGet)
+		customerLoaderOnly.HandleFunc("/tasks", h.tasks).Methods(http.MethodGet)
 	}
 
 	return r

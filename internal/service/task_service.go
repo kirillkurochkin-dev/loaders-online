@@ -9,6 +9,8 @@ import (
 
 type TaskRepository interface {
 	CreateTask(ctx context.Context, task *dto.TaskGeneratedDto) error
+	GetCompletedTasksForLoader(ctx context.Context, id int) ([]dto.TaskCompletedDto, error)
+	GetUncompletedTasksForCustomer(ctx context.Context, id int) ([]dto.TaskUncompletedDto, error)
 }
 
 type TaskService struct {
@@ -37,4 +39,12 @@ func (s *TaskService) CreateTask(ctx context.Context, taskCr *dto.CreateTaskDto)
 	}
 	return nil
 
+}
+
+func (t *TaskService) GetUncompletedTasks(ctx context.Context, id int) ([]dto.TaskUncompletedDto, error) {
+	return t.taskRepository.GetUncompletedTasksForCustomer(ctx, id)
+}
+
+func (t *TaskService) GetCompletedTasks(ctx context.Context, id int) ([]dto.TaskCompletedDto, error) {
+	return t.taskRepository.GetCompletedTasksForLoader(ctx, id)
 }
