@@ -38,3 +38,41 @@ Loaders Online позволяет клиентам нанимать грузчи
 - GET /me - показать свои характеристики и зарегистрированных грузчиков
 - GET /tasks - список доступных заданий
 - POST /start - добавить грузчиков и начать выполнение задания
+## Правила игры
+---
+- Регистрируется заказчик /api/register
+  ```
+  {
+  	"username": "customer_username",
+  	"password": "customer_password",
+  	"role": "customer"
+  }
+  ```
+- Регистрируются работники /api/register
+  ```
+  {
+  	"username": "loader_username",
+  	"password": "loader_password",
+  	"role": "loader"
+  }
+  ```
+- Заказчик заходит в свой профиль /api/login
+  ```
+  {
+  	"username": "customer_username",
+  	"password": "customer_password"
+  }
+  ```
+- Извне генерируются задачи для пользователя /api/tasks
+  ```
+  {
+  	"count": 5,
+  	"customer_id": 1
+  }
+  ```
+- Заказчик выбирает работников и начинает игру
+  ```
+  {
+	      "loaders": [2, 3, 4, 10]
+  }
+  ```
