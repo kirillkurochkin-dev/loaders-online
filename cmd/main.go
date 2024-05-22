@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"loaders-online/config"
+	"loaders-online/internal/handler"
+	"loaders-online/internal/repository"
+	"loaders-online/internal/service"
 	"loaders-online/pkg/database"
 	"net/http"
 	"os"
@@ -36,8 +39,14 @@ func main() {
 	}
 	defer db.Close()
 
+	userRepository := repository.NewUserRepository(db)
+
+	userService := service.NewUserService(userRepository)
+	contr := handler.NewHandler(userService)
+
 	srv := &http.Server{
-		Addr: ":8080",
+		Addr:    ":8080",
+		Handler: contr.InitRouter(),
 	}
 
 	fmt.Println(dbConfig.DB)
