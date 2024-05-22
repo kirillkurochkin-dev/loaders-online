@@ -10,8 +10,8 @@ type UserRepository struct {
 	db *sql.DB
 }
 
-func NewUserRepository(db *sql.DB) *UserRepository {
-	return &UserRepository{db: db}
+func NewUserRepository(db *sql.DB) UserRepository {
+	return UserRepository{db: db}
 }
 
 func (u *UserRepository) Register(ctx context.Context, userDto *dto.UserSignUpDto) (int, error) {

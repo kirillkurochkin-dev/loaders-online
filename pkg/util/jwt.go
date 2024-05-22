@@ -1,6 +1,8 @@
 package util
 
 import (
+	"errors"
+	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"strconv"
 	"time"
@@ -29,4 +31,32 @@ func GenerateJWT(userID int, role string) (string, error) {
 	tok, err := token.SignedString(jwtKey)
 
 	return tok, err
+}
+
+func ValidateJWT(tokenString string) (*Claims, error) {
+	claims := &Claims{}
+
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return jwtKey, nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !token.Valid {
+		return nil, errors.New("invalid token")
+	}
+
+	if claims.ExpiresAt < time.Now().Unix() {
+		return nil, errors.New("token is expired")
+	}
+
+	// Логирование декодированных клаймов
+	fmt.Printf("Validated Claims: %+v\n", claims)
+
+	return claims, nil
 }
