@@ -8,7 +8,8 @@ import (
 )
 
 type UserService interface {
-	Register(ctx context.Context, user *dto.UserSignInDto) error
+	Register(ctx context.Context, user *dto.UserSignUpDto) error
+	Login(ctx context.Context, user *dto.UserSignInDto) (string, error)
 }
 
 type Handler struct {
@@ -28,6 +29,7 @@ func (h *Handler) InitRouter() *mux.Router {
 	{
 		//public
 		public.HandleFunc("/register", h.register).Methods(http.MethodPost)
+		public.HandleFunc("/login", h.login).Methods(http.MethodPost)
 	}
 
 	return r

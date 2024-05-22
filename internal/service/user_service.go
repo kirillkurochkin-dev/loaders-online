@@ -7,7 +7,8 @@ import (
 )
 
 type UserRepository interface {
-	Register(ctx context.Context, user *dto.UserSignInDto) (int, error)
+	Register(ctx context.Context, user *dto.UserSignUpDto) (int, error)
+	GetUserByUsername(ctx context.Context, username string) (dto.UserByUsername, error)
 }
 
 type UserService struct {
@@ -20,7 +21,7 @@ func NewUserService(userRepository UserRepository) *UserService {
 	}
 }
 
-func (s *UserService) Register(ctx context.Context, user *dto.UserSignInDto) error {
+func (s *UserService) Register(ctx context.Context, user *dto.UserSignUpDto) error {
 	hashedPassword, err := util.HashPassword(user.Password)
 	if err != nil {
 		return err
@@ -33,4 +34,23 @@ func (s *UserService) Register(ctx context.Context, user *dto.UserSignInDto) err
 	}
 
 	return nil
+}
+
+func (s *UserService) Login(ctx context.Context, user *dto.UserSignInDto) (string, error) {
+	tempUser, err := s.userRepository.GetUserByUsername(ctx, user.Username)
+	if err != nil {
+		return "", err
+	}
+
+	err = util.CheckPasswordHash(tempUser.PasswordHash, user.Password)
+	if err != nil {
+		return "", err
+	}
+
+	token, err := util.GenerateJWT(tempUser.UserID, tempUser.Role)
+	if err != nil {
+		return "", err
+	}
+
+	return token, nil
 }
